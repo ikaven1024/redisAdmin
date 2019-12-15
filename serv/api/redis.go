@@ -2,69 +2,92 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"github/ikaven/redisGoAdmin/redis"
+	"github/ikaven/redisAdmin/redis"
+	"github/ikaven/redisAdmin/server"
+	"strconv"
 )
 
-func installRedisApi(router *gin.Engine) {
+const ContextKeyServer = "server"
+
+func installRedisApi(router *gin.Engine, manager *server.Manager) {
 	a := &redisApi{
-		cli: redis.NewRedisCli("192.168.11.128:6379"),
+		serverManager: manager,
 	}
 
-	router.POST("/api/redis/keys/nodes", a.getKeyTreeNodes)
+	router.GET("/api/redis/dbCount", a.getDbCount)
+	router.GET("/api/redis/keys/treeNodes", a.getKeyTreeNodes)
 	router.GET("/api/redis/keys/summary", a.getKeySummary)
 	router.GET("/api/redis/keys/value", a.getValueOfKey)
 }
 
 type redisApi struct {
-	cli *redis.Client
+	serverManager *server.Manager
+}
+
+func (r redisApi) getDbCount(c *gin.Context) {
+	cli, ok := r.getRedisClient(c)
+	if !ok {
+		return
+	}
+
+	data, err := cli.ConfigGet("databases").Result()
+	if err != nil {
+		_ = c.Error(NewServerError("查询DBSize失败", err.Error()))
+		return
+	}
+	numStr := data[1].(string)
+	num, _ := strconv.Atoi(numStr)
+	response(c, gin.H{
+		"number":   num,
+	})
 }
 
 // listKeySubMenus return sub nodes for key tree.
 func (r redisApi) getKeyTreeNodes(c *gin.Context) {
-
-	var body struct {
-		Prefix string `json:"prefix"`
+	cli, ok := r.getRedisClient(c)
+	if !ok {
+	 return
 	}
 
-	if err := c.ShouldBind(&body); err != nil {
-		responseError(c, err)
-	}
+	prefix := c.Query("prefix")
 
-	children, err := r.cli.KeyMenus(body.Prefix)
+	children, err := cli.KeyMenus(prefix)
 	if err != nil {
-		responseError(c, err)
+		_ = c.Error(NewServerError("加载key失败", err.Error()))
 		return
 	}
 	response(c, gin.H{
-		"prefix":   body.Prefix,
+		"prefix":   prefix,
 		"children": children,
 	})
 }
 
 // getKeySummary return ttl and type of key
 func (r redisApi) getKeySummary(c *gin.Context) {
-	var body struct {
-		Key string `json:"key"`
-	}
-	if err := c.ShouldBind(&body); err != nil {
-		responseError(c, err)
+	cli, ok := r.getRedisClient(c)
+	if !ok {
 		return
 	}
 
-	ttl, err := r.cli.TTL(body.Key).Result()
+	key := c.Query("key")
+	if len(key) == 0 {
+		_ = c.Error(NewServerError("参数错误", "丢失查询参数" + key))
+	}
+
+	ttl, err := cli.TTL(key).Result()
 	if err != nil {
-		responseError(c, err)
+		_ = c.Error(NewServerError("查询key ttl失败", err.Error()))
 		return
 	}
 
-	typ, err := r.cli.Type(body.Key).Result()
+	typ, err := cli.Type(key).Result()
 	if err != nil {
-		responseError(c, err)
+		_ = c.Error(NewServerError("查询key类型失败", err.Error()))
 		return
 	}
 
 	response(c, gin.H{
-		"key":  body.Key,
+		"key":  key,
 		"ttl":  ttl.String(),
 		"type": typ,
 	})
@@ -73,33 +96,60 @@ func (r redisApi) getKeySummary(c *gin.Context) {
 // getValueOfKey return value of key.
 // support kinds of key, type is set in `Type`
 func (r redisApi) getValueOfKey(c *gin.Context) {
-
-	var body struct {
-		Type     string `json:"type"`
-		Key      string `json:"key"`
-		Match    string `json:"match"`
-		PageSize int64  `json:"pageSize"`
-		PageNo   int64  `json:"pageNo"`
-		Cursor   uint64 `json:"cursor"`
-	}
-	if err := c.ShouldBind(&body); err != nil {
-		responseError(c, err)
+	cli, ok := r.getRedisClient(c)
+	if !ok {
 		return
 	}
 
-	values, err := r.cli.GetValue(body.Key, redis.GetValueOpts{
-		Type:     body.Type,
-		Match:    body.Match,
-		PageNo:   body.PageNo,
-		PageSize: body.PageSize,
-		Cursor:   body.Cursor,
+	var param struct {
+		Type     string `form:"type"`
+		Key      string `form:"key"`
+		Match    string `form:"match"`
+		PageSize int64  `form:"pageSize"`
+		PageNo   int64  `form:"pageNo"`
+		Cursor   uint64 `form:"cursor"`
+	}
+	if err := c.ShouldBindQuery(&param); err != nil {
+		_ = c.Error(NewBadRequestError("参数错误", err.Error()))
+		return
+	}
+
+	result, err := cli.GetValue(param.Key, redis.GetValueOpts{
+		Type:     param.Type,
+		Match:    param.Match,
+		PageNo:   param.PageNo,
+		PageSize: param.PageSize,
+		Cursor:   param.Cursor,
 	})
 	if err != nil {
-		responseError(c, err)
+		_ = c.Error(NewServerError("查询value失败", err.Error()))
 		return
 	}
-	response(c, gin.H{
-		"key":    body.Key,
-		"values": values,
-	})
+	response(c, result)
+}
+
+func (r redisApi) getRedisClient(c *gin.Context) (*redis.Client, bool) {
+	var param struct{
+		ServerID uint `form:"serverId"`
+		DB       int  `form:"db"`
+	}
+
+	if err := c.ShouldBindQuery(&param); err != nil {
+		_ = c.Error(NewBadRequestError("参数错误", err.Error()))
+		return nil, false
+	}
+
+	serv, err := r.serverManager.Get(param.ServerID)
+	if err != nil {
+		_ = c.Error(NewServerError("查询服务信息失败", err.Error()))
+		return nil, false
+	}
+
+	var cli *redis.Client
+	if serv.IsCluster() {
+		cli = redis.NewRedisClusterCli(serv.Addresses.Data, serv.Password)
+	} else {
+		cli = redis.NewRedisCli(serv.Addresses.Data[0], serv.Password, param.DB)
+	}
+	return cli, true
 }

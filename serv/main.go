@@ -1,9 +1,11 @@
 package main
 
 import (
-	"github/ikaven/redisGoAdmin/api"
+	"flag"
 )
 
 func main() {
-	api.RunApi()
+	flag.Parse()
+	app := NewApp()
+	app.Run()
 }

@@ -1,36 +1,42 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
-	"log"
+	"github/ikaven/redisAdmin/server"
 )
 
-func RunApi() {
-	gin.ForceConsoleColor()
-
-	router := gin.Default()
-	installRedisApi(router)
-
-	log.Println(router.Run(":80"))
+type Api struct {
+	engine *gin.Engine
 }
 
-type apiResult struct {
-	Data    interface{} `json:"data,emit"`
-	Success bool        `json:"success"`
-	Message string      `json:"message,emit"`
+func SetupApi(serverManager *server.Manager) http.Handler {
+	gin.ForceConsoleColor()
+
+	engine := gin.Default()
+	engine.Use(errorHandle)
+
+	installUserApi(engine)
+	installRedisApi(engine, serverManager)
+	installRedisServerApi(engine, serverManager)
+
+	return engine
+}
+
+func (a *Api) Run(addr string) error {
+	return a.engine.Run(addr)
+}
+
+type result struct {
+	Data    interface{} `json:"data,omitempty"`
+	Message string      `json:"message,omitempty"`
+	Detail  string      `json:"detail,omitempty"`
 }
 
 func response(c *gin.Context, data interface{}) {
-	c.JSON(200, &apiResult{
-		Success: true,
-		Data:    data,
-	})
-}
-
-func responseError(c *gin.Context, err error) {
-	_ = c.Error(err)
-	c.JSON(200, &apiResult{
-		Success: false,
-		Message: err.Error(),
+	c.JSON(200, &result{
+		//Success: true,
+		Data: data,
 	})
 }

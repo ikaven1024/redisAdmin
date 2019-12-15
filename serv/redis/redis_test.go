@@ -9,7 +9,7 @@ import (
 	"github.com/go-redis/redis/v7"
 )
 
-var cli = NewRedisCli("192.168.11.128:6379")
+var cli = NewRedisCli("192.168.11.128:6379", "", 0)
 
 func TestCreateData(t *testing.T) {
 	defer timing(t)()

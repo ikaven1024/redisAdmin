@@ -3,7 +3,7 @@ package redis
 import (
 	"context"
 	"fmt"
-	"github/ikaven/redisGoAdmin/util"
+	"github/ikaven/redisAdmin/util"
 	"log"
 	"math/rand"
 	"sort"
@@ -17,8 +17,8 @@ type Client struct {
 	redis.Cmdable
 }
 
-func NewRedisCli(addr string) *Client {
-	cli := redis.NewClient(&redis.Options{Addr: addr})
+func NewRedisCli(addr string, password string, db int) *Client {
+	cli := redis.NewClient(&redis.Options{Addr: addr, Password: password, DB: db})
 	cli.AddHook(&LogHook{})
 
 	return &Client{
@@ -26,9 +26,9 @@ func NewRedisCli(addr string) *Client {
 	}
 }
 
-func NewRedisClusterCli(addrs []string) *Client {
+func NewRedisClusterCli(addrs []string, password string) *Client {
 	return &Client{
-		Cmdable: redis.NewClusterClient(&redis.ClusterOptions{Addrs: addrs}),
+		Cmdable: redis.NewClusterClient(&redis.ClusterOptions{Addrs: addrs, Password: password}),
 	}
 }
 
@@ -48,7 +48,7 @@ func (r Client) KeyMenus(prefix string) ([]Menu, error) {
 		}
 
 		for _, k := range keys {
-			suffix := strings.TrimLeft(k, prefix)
+			suffix := strings.TrimPrefix(k, prefix)
 			splits := strings.SplitN(suffix, ":", 2)
 
 			keySet[Menu{
@@ -102,32 +102,30 @@ func (r Client) Config(parameter string) (map[string]interface{}, error) {
 	return result, nil
 }
 
-func (r Client) GetValue(key string, opts GetValueOpts) (interface{}, error) {
-
+func (r Client) GetValue(key string, opts GetValueOpts) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	result["key"] = key
 	var err error
-	switch strings.ToUpper(key) {
+	switch strings.ToUpper(opts.Type) {
 	case "STRING":
-		return r.Get(key).Result()
+		result["value"], err = r.Get(key).Result()
+		return result, err
 	case "LIST":
-		result := make(map[string]interface{})
-		result["total"] = r.LLen(key)
+		result["total"] = r.LLen(key).Val()
 		result["pageSize"] = opts.PageSize
 		result["pageNo"] = opts.PageNo
 		result["value"], err = r.LRange(key, (opts.PageNo-1)*opts.PageSize, opts.PageSize*opts.PageNo-1).Result()
 		return result, err
 	case "HASH":
-		result := make(map[string]interface{})
-		result["total"] = r.HLen(key)
+		result["total"] = r.HLen(key).Val()
 		result["value"], result["cursor"], err = r.valueScan(key, opts.Match, opts.Cursor, opts.PageSize, r.HScan)
 		return result, err
 	case "SET":
-		result := make(map[string]interface{})
-		result["total"] = r.SCard(key)
+		result["total"] = r.SCard(key).Val()
 		result["value"], result["cursor"], err = r.valueScan(key, opts.Match, opts.Cursor, opts.PageSize, r.SScan)
 		return result, err
 	case "ZSET":
-		result := make(map[string]interface{})
-		result["total"] = r.ZCard(key)
+		result["total"] = r.ZCard(key).Val()
 		result["value"], result["cursor"], err = r.valueScan(key, opts.Match, opts.Cursor, opts.PageSize, r.ZScan)
 		return result, err
 	default:
@@ -141,7 +139,7 @@ func (r Client) valueScan(key, match string, cursor uint64, size int64, scanner 
 		match = "*"
 	}
 
-	data := make([]string, size)
+	data := make([]string, 0, size)
 	for {
 		var v []string
 		var err error

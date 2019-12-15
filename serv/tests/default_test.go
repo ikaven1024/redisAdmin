@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"testing"
 
-	_ "github/ikaven/redisGoAdmin/routers"
+	_ "github/ikaven/redisAdmin/routers"
 
 	"github.com/astaxie/beego"
 	. "github.com/smartystreets/goconvey/convey"
