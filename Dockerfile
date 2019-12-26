@@ -1,9 +1,6 @@
 # Golang build container
 FROM golang:1.12 as serv-builder
 
-ADD . .
-RUN sleep 100000
-
 ADD serv /building
 WORKDIR /building
 
