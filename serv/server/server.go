@@ -1,62 +1,42 @@
 package server
 
 import (
-	"github.com/jinzhu/gorm"
-	"github/ikaven/redisAdmin/repository"
+	"flag"
+	"log"
+	"net/http"
+	"path/filepath"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/ikaven1024/redisAdmin/api"
+	"github.com/ikaven1024/redisAdmin/redis_server"
 )
 
-type RedisMode int
+var webRoot = flag.String("web-root", "./wwww", "dir of web resource.")
 
-const (
-	RedisModeStandalone RedisMode = 0
-	RedisModeCluster    RedisMode = 1
-)
-
-type RedisServer struct {
-	repository.Model
-	Name      string                 `gorm:"type:varchar(20);not null"`
-	Mode      RedisMode              `gorm:"type:integer;not null"`
-	Addresses repository.StringSlice `gorm:"type:varchar(500);not null"`
-	Password  string                 `gorm:"type:varchar(20);not null"`
+type Server struct {
+	engine *gin.Engine
 }
 
-type Manager struct {
-	repository *gorm.DB
-}
+func New() *Server {
+	gin.ForceConsoleColor()
 
-func NewManager(repository *gorm.DB) *Manager {
-	repository.AutoMigrate(&RedisServer{})
+	engine := gin.Default()
+	engine.StaticFile(".", *webRoot)
+	engine.StaticFile("/index.html", filepath.Join(*webRoot, "index.html"))
+	engine.StaticFile("/favicon.ico", filepath.Join(*webRoot, "favicon.ico"))
+	engine.Static("/static", filepath.Join(*webRoot, "static"))
 
-	return &Manager{
-		repository: repository,
+	return &Server{
+		engine: engine,
 	}
 }
 
-func (m *Manager) Create(server *RedisServer) error {
-	return m.repository.Create(server).Error
+func (s *Server) InstallApi(serverManager *redis_server.Manager) {
+	api.InstallApi(s.engine, serverManager)
 }
 
-func (m *Manager) Update(server *RedisServer) error {
-	// Save可以保存所有字段。Update只能保存非零字段。Password可能是空的，所以只能使用Save来保存
-	return m.repository.Save(server).Error
-}
-
-func (m *Manager) Delete(id uint) error {
-	server := RedisServer{}
-	server.ID = id
-	return m.repository.Delete(&server).Error
-}
-
-func (m *Manager) Get(id uint) (server RedisServer, err error) {
-	err = m.repository.First(&server, id).Error
-	return
-}
-
-func (m *Manager) List() (servers []RedisServer, err error) {
-	err = m.repository.Find(&servers).Error
-	return
-}
-
-func (s RedisServer) IsCluster() bool {
-	return s.Mode == RedisModeCluster
+func (s *Server) Run(addr string) {
+	log.Println("Server listening at:", addr)
+	log.Println(http.ListenAndServe(addr, s.engine))
 }

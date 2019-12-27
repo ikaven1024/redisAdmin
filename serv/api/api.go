@@ -3,18 +3,16 @@ package api
 import (
 	"net/http"
 
+	"github.com/ikaven1024/redisAdmin/redis_server"
+
 	"github.com/gin-gonic/gin"
-	"github/ikaven/redisAdmin/server"
 )
 
 type Api struct {
 	engine *gin.Engine
 }
 
-func SetupApi(serverManager *server.Manager) http.Handler {
-	gin.ForceConsoleColor()
-
-	engine := gin.Default()
+func InstallApi(engine *gin.Engine, serverManager *redis_server.Manager) http.Handler {
 	engine.Use(errorHandle)
 
 	installUserApi(engine)

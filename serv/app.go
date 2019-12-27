@@ -2,22 +2,19 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	"github.com/jinzhu/gorm"
 
-	"github/ikaven/redisAdmin/web"
-
-	"github/ikaven/redisAdmin/api"
-	"github/ikaven/redisAdmin/config"
-	"github/ikaven/redisAdmin/repository"
-	"github/ikaven/redisAdmin/server"
+	"github.com/ikaven1024/redisAdmin/config"
+	"github.com/ikaven1024/redisAdmin/redis_server"
+	"github.com/ikaven1024/redisAdmin/repository"
+	"github.com/ikaven1024/redisAdmin/server"
 )
 
 type App struct {
 	config *config.Config
 
-	mux *http.ServeMux
+	server *server.Server
 }
 
 func NewApp() *App {
@@ -32,11 +29,10 @@ func NewApp() *App {
 	if db, err = repository.Open(); err != nil {
 		log.Fatalf("Open repository error: %v", err)
 	}
-	serverManager := server.NewManager(db)
+	serverManager := redis_server.NewManager(db)
 
-	app.mux = http.NewServeMux()
-	app.mux.Handle("/", web.Server())
-	app.mux.Handle("/api", api.SetupApi(serverManager))
+	app.server = server.New()
+	app.server.InstallApi(serverManager)
 
 	return &app
 }
@@ -46,7 +42,5 @@ func (a *App) Run() {
 	if len(a.config.Server.Address) != 0 {
 		addr = a.config.Server.Address
 	}
-
-	log.Println("Server listening at:", addr)
-	log.Println(http.ListenAndServe(addr, a.mux))
+	a.server.Run(addr)
 }

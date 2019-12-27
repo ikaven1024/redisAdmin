@@ -1,19 +1,20 @@
 package api
 
 import (
-	"github/ikaven/redisAdmin/repository"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github/ikaven/redisAdmin/server"
+
+	"github.com/ikaven1024/redisAdmin/redis_server"
+	"github.com/ikaven1024/redisAdmin/repository"
 )
 
 type redisServerApi struct {
-	manager *server.Manager
+	manager *redis_server.Manager
 }
 
-func installRedisServerApi(router *gin.Engine, manager *server.Manager) {
+func installRedisServerApi(router *gin.Engine, manager *redis_server.Manager) {
 	a := &redisServerApi{
 		manager: manager,
 	}
@@ -32,11 +33,11 @@ func (a redisServerApi) list(c *gin.Context) {
 	}
 
 	type vo struct {
-		ID        uint             `json:"id"`
-		Name      string           `json:"name"`
-		Mode      server.RedisMode `json:"mode"`
-		Addresses []string         `json:"addresses"`
-		Password  string           `json:"password"`
+		ID        uint                   `json:"id"`
+		Name      string                 `json:"name"`
+		Mode      redis_server.RedisMode `json:"mode"`
+		Addresses []string               `json:"addresses"`
+		Password  string                 `json:"password"`
 	}
 
 	res := make([]vo, 0, len(data))
@@ -111,24 +112,24 @@ func (a redisServerApi) delete(c *gin.Context) {
 	})
 }
 
-func (a redisServerApi) getRedisServer(c *gin.Context) (server.RedisServer, bool) {
+func (a redisServerApi) getRedisServer(c *gin.Context) (redis_server.RedisServer, bool) {
 	var body struct {
-		ID        uint             `json:"id"`
-		Name      string           `json:"name"`
-		Mode      server.RedisMode `json:"mode"`
-		Addresses []string         `json:"addresses"`
-		Password  string           `json:"password"`
+		ID        uint                   `json:"id"`
+		Name      string                 `json:"name"`
+		Mode      redis_server.RedisMode `json:"mode"`
+		Addresses []string               `json:"addresses"`
+		Password  string                 `json:"password"`
 	}
 	err := c.ShouldBind(&body)
 	if err != nil {
 		_ = c.Error(NewBadRequestError("参数错误", err.Error()))
-		return server.RedisServer{}, false
+		return redis_server.RedisServer{}, false
 	}
-	s := server.RedisServer{
-		Name: body.Name,
-		Mode: body.Mode,
+	s := redis_server.RedisServer{
+		Name:      body.Name,
+		Mode:      body.Mode,
 		Addresses: repository.NewStringSlice(body.Addresses),
-		Password: body.Password,
+		Password:  body.Password,
 	}
 	s.ID = body.ID
 	return s, true

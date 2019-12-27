@@ -26,7 +26,7 @@ RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/s
 WORKDIR /usr/share/redis-admin
 ENV GIN_MODE=release
 
-COPY --from=serv-builder /building/redis-admin-serv .
+COPY --from=serv-builder /building/redis-admin-serv /building/config.ini ./
 COPY --from=web-builder /building/dist/ ./www/
 
 EXPOSE 80

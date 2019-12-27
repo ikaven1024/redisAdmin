@@ -1,9 +1,9 @@
-package redis
+package redis_client
 
 import (
 	"context"
 	"fmt"
-	"github/ikaven/redisAdmin/util"
+	"github.com/ikaven1024/redisAdmin/util"
 	"log"
 	"math/rand"
 	"sort"

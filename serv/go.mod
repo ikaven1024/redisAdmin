@@ -1,10 +1,9 @@
-module github/ikaven/redisAdmin
+module github.com/ikaven1024/redisAdmin
 
 go 1.12
 
 require (
 	github.com/astaxie/beego v1.12.0
-	github.com/boltdb/bolt v1.3.1
 	github.com/denisenkom/go-mssqldb v0.0.0-20191128021309-1d7a30a10f73 // indirect
 	github.com/gin-gonic/gin v1.5.0
 	github.com/go-redis/redis/v7 v7.0.0-beta.4

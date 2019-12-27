@@ -2,14 +2,14 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"github/ikaven/redisAdmin/redis"
-	"github/ikaven/redisAdmin/server"
+	"github.com/ikaven1024/redisAdmin/redis_client"
+	"github.com/ikaven1024/redisAdmin/redis_server"
 	"strconv"
 )
 
 const ContextKeyServer = "server"
 
-func installRedisApi(router *gin.Engine, manager *server.Manager) {
+func installRedisApi(router *gin.Engine, manager *redis_server.Manager) {
 	a := &redisApi{
 		serverManager: manager,
 	}
@@ -21,7 +21,7 @@ func installRedisApi(router *gin.Engine, manager *server.Manager) {
 }
 
 type redisApi struct {
-	serverManager *server.Manager
+	serverManager *redis_server.Manager
 }
 
 func (r redisApi) getDbCount(c *gin.Context) {
@@ -38,7 +38,7 @@ func (r redisApi) getDbCount(c *gin.Context) {
 	numStr := data[1].(string)
 	num, _ := strconv.Atoi(numStr)
 	response(c, gin.H{
-		"number":   num,
+		"number": num,
 	})
 }
 
@@ -46,7 +46,7 @@ func (r redisApi) getDbCount(c *gin.Context) {
 func (r redisApi) getKeyTreeNodes(c *gin.Context) {
 	cli, ok := r.getRedisClient(c)
 	if !ok {
-	 return
+		return
 	}
 
 	prefix := c.Query("prefix")
@@ -71,7 +71,7 @@ func (r redisApi) getKeySummary(c *gin.Context) {
 
 	key := c.Query("key")
 	if len(key) == 0 {
-		_ = c.Error(NewServerError("参数错误", "丢失查询参数" + key))
+		_ = c.Error(NewServerError("参数错误", "丢失查询参数"+key))
 	}
 
 	ttl, err := cli.TTL(key).Result()
@@ -114,7 +114,7 @@ func (r redisApi) getValueOfKey(c *gin.Context) {
 		return
 	}
 
-	result, err := cli.GetValue(param.Key, redis.GetValueOpts{
+	result, err := cli.GetValue(param.Key, redis_client.GetValueOpts{
 		Type:     param.Type,
 		Match:    param.Match,
 		PageNo:   param.PageNo,
@@ -128,8 +128,8 @@ func (r redisApi) getValueOfKey(c *gin.Context) {
 	response(c, result)
 }
 
-func (r redisApi) getRedisClient(c *gin.Context) (*redis.Client, bool) {
-	var param struct{
+func (r redisApi) getRedisClient(c *gin.Context) (*redis_client.Client, bool) {
+	var param struct {
 		ServerID uint `form:"serverId"`
 		DB       int  `form:"db"`
 	}
@@ -145,11 +145,11 @@ func (r redisApi) getRedisClient(c *gin.Context) (*redis.Client, bool) {
 		return nil, false
 	}
 
-	var cli *redis.Client
+	var cli *redis_client.Client
 	if serv.IsCluster() {
-		cli = redis.NewRedisClusterCli(serv.Addresses.Data, serv.Password)
+		cli = redis_client.NewRedisClusterCli(serv.Addresses.Data, serv.Password)
 	} else {
-		cli = redis.NewRedisCli(serv.Addresses.Data[0], serv.Password, param.DB)
+		cli = redis_client.NewRedisCli(serv.Addresses.Data[0], serv.Password, param.DB)
 	}
 	return cli, true
 }
