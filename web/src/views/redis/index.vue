@@ -100,7 +100,7 @@ export default {
       }
     },
     openEditServerDialog() {
-
+      this.$refs['editServerDialog'].open()
     },
     loadServerOpts() {
 

@@ -12,7 +12,7 @@ import (
 	"github.com/ikaven1024/redisAdmin/redis_server"
 )
 
-var webRoot = flag.String("web-root", "./wwww", "dir of web resource.")
+var webRoot = flag.String("web-root", "./www", "dir of web resource.")
 
 type Server struct {
 	engine *gin.Engine
@@ -22,6 +22,8 @@ func New() *Server {
 	gin.ForceConsoleColor()
 
 	engine := gin.Default()
+
+	log.Println("Web root at", *webRoot)
 	engine.StaticFile(".", *webRoot)
 	engine.StaticFile("/index.html", filepath.Join(*webRoot, "index.html"))
 	engine.StaticFile("/favicon.ico", filepath.Join(*webRoot, "favicon.ico"))
@@ -37,6 +39,6 @@ func (s *Server) InstallApi(serverManager *redis_server.Manager) {
 }
 
 func (s *Server) Run(addr string) {
-	log.Println("Server listening at:", addr)
+	log.Println("Server listening at", addr)
 	log.Println(http.ListenAndServe(addr, s.engine))
 }

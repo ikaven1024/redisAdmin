@@ -31,4 +31,3 @@ COPY --from=web-builder /building/dist/ ./www/
 
 EXPOSE 80
 ENTRYPOINT /usr/share/redis-admin/redis-admin-serv
-
