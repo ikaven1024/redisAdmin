@@ -34,7 +34,7 @@
       </el-tabs>
     </el-col>
 
-    <edit-server-dialog ref="editServerDialog" @reload="loadServerOpts"/>
+    <edit-server-dialog ref="editServerDialog" @added="onServerAdded" @updated="onServerUpdated" />
   </el-row>
 </template>
 <script>
@@ -70,7 +70,7 @@ export default {
           listServer().then(data => {
             resolve(data.map(s => { return { id: 'server_' + s.id, label: s.name, isLeaf: false, serverId: s.id } }))
             this.treeDataLoading = false
-          })
+          }).catch(() => { node.loading = false })
           break
         case 1:
           getDbCount({ serverId: serverId }).then(data => {
@@ -80,7 +80,7 @@ export default {
               nodes.push({ id: 'DB' + i, label: 'DB' + i, isLeaf: false, serverId: serverId, db: i })
             }
             resolve(nodes)
-          })
+          }).catch(() => { node.loading = false })
           break
         default:
           keyTreeNodes({ serverId: serverId, db: db, prefix: prefix }).then(data => {
@@ -96,13 +96,16 @@ export default {
               }
               return n
             }))
-          })
+          }).catch(() => { node.loading = false })
       }
     },
     openEditServerDialog() {
       this.$refs['editServerDialog'].open()
     },
-    loadServerOpts() {
+    onServerAdded(data) {
+      this.treeData.push({ id: 'server_' + data.id, label: data.name, isLeaf: false, serverId: data.id })
+    },
+    onServerUpdated() {
 
     },
     clickAdd(node, data) {

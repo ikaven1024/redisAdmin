@@ -8,8 +8,8 @@ import (
 type RedisMode int
 
 const (
-	RedisModeStandalone RedisMode = 0
-	RedisModeCluster    RedisMode = 1
+	RedisModeSole    RedisMode = 0
+	RedisModeCluster RedisMode = 1
 )
 
 type RedisServer struct {
@@ -49,11 +49,15 @@ func (m *Manager) Delete(id uint) error {
 
 func (m *Manager) Get(id uint) (server RedisServer, err error) {
 	err = m.repository.First(&server, id).Error
+	server.Password = ""
 	return
 }
 
 func (m *Manager) List() (servers []RedisServer, err error) {
 	err = m.repository.Find(&servers).Error
+	for _, s := range servers {
+		s.Password = ""
+	}
 	return
 }
 

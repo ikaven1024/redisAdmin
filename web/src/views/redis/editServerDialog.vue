@@ -84,8 +84,19 @@ export default {
         commitData.addresses = commitData.addresses.slice(0, 1)
       }
 
-      const promise = commitData.id ? updateServer(commitData) : addServer(commitData)
-      promise.then(() => { this.closeAndReload('提交成功') })
+      if (commitData.id) {
+        updateServer(commitData).then((data) => {
+          this.$message.success('修改成功')
+          this.$emit('updated', data)
+          this.close()
+        })
+      } else {
+        addServer(commitData).then((data) => {
+          this.$message.success('添加成功')
+          this.$emit('added', data)
+          this.close()
+        })
+      }
     },
     removeServer() {
       this.$confirm(`确定要删除服务${this.data.name}吗？`, {

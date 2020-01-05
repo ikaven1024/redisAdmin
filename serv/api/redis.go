@@ -30,6 +30,13 @@ func (r redisApi) getDbCount(c *gin.Context) {
 		return
 	}
 
+	if redis_client.IsCluster(cli) {
+		response(c, gin.H{
+			"number": 1,
+		})
+		return
+	}
+
 	data, err := cli.ConfigGet("databases").Result()
 	if err != nil {
 		_ = c.Error(NewServerError("查询DBSize失败", err.Error()))

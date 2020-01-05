@@ -32,27 +32,8 @@ func (a redisServerApi) list(c *gin.Context) {
 		return
 	}
 
-	type vo struct {
-		ID        uint                   `json:"id"`
-		Name      string                 `json:"name"`
-		Mode      redis_server.RedisMode `json:"mode"`
-		Addresses []string               `json:"addresses"`
-		Password  string                 `json:"password"`
-	}
-
-	res := make([]vo, 0, len(data))
-	for _, d := range data {
-		res = append(res, vo{
-			ID:        d.ID,
-			Name:      d.Name,
-			Mode:      d.Mode,
-			Addresses: d.Addresses.Data,
-			Password:  d.Password,
-		})
-	}
-
 	c.JSON(200, result{
-		Data: res,
+		Data: convertRedisServerSliceToVo(data),
 	})
 }
 
@@ -69,7 +50,7 @@ func (a redisServerApi) add(c *gin.Context) {
 
 	c.JSON(http.StatusOK, result{
 		Message: "创建成功",
-		Data:    data,
+		Data:    convertRedisServerToVo(data),
 	})
 }
 
@@ -92,7 +73,7 @@ func (a redisServerApi) update(c *gin.Context) {
 
 	c.JSON(http.StatusOK, result{
 		Message: "创建成功",
-		Data:    data,
+		Data:    convertRedisServerToVo(data),
 	})
 }
 
@@ -142,4 +123,28 @@ func (a redisServerApi) getID(c *gin.Context) (uint, bool) {
 		return 0, false
 	}
 	return uint(id), true
+}
+
+type redisServerVo struct {
+	ID        uint                   `json:"id"`
+	Name      string                 `json:"name"`
+	Mode      redis_server.RedisMode `json:"mode"`
+	Addresses []string               `json:"addresses"`
+}
+
+func convertRedisServerToVo(data redis_server.RedisServer) redisServerVo {
+	return redisServerVo{
+		ID:        data.ID,
+		Name:      data.Name,
+		Mode:      data.Mode,
+		Addresses: data.Addresses.Data,
+	}
+}
+
+func convertRedisServerSliceToVo(data []redis_server.RedisServer) []redisServerVo {
+	vo := make([]redisServerVo, len(data))
+	for i := 0; i < len(data); i++ {
+		vo[i] = convertRedisServerToVo(data[i])
+	}
+	return vo
 }

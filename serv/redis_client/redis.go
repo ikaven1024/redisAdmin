@@ -32,6 +32,11 @@ func NewRedisClusterCli(addrs []string, password string) *Client {
 	}
 }
 
+func IsCluster(c *Client) bool {
+	_, ok := c.Cmdable.(*redis.ClusterClient)
+	return ok
+}
+
 func (r Client) KeyMenus(prefix string) ([]Menu, error) {
 	var keySet = make(map[Menu]struct{})
 	var cursor uint64 = 0
