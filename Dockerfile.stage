@@ -1,0 +1,20 @@
+# Fianl container
+FROM alpine:3.11
+
+RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
+	wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.30-r0/glibc-2.30-r0.apk && \
+	apk add glibc-2.30-r0.apk && \
+	rm -rf glibc-2.30-r0.apk
+
+WORKDIR /usr/share/redis-admin
+ENV GIN_MODE=release
+ENV PATH=$PATH:/usr/share/redis-admin/bin
+
+RUN mkdir -p ./data
+ADD serv/config.ini ./config.ini
+ADD serv/redis-admin ./bin/redis-admin
+ADD web/dist ./public/
+
+EXPOSE 6789
+ENTRYPOINT /usr/share/redis-admin/bin/redis-admin
+

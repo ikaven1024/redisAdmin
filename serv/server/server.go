@@ -12,7 +12,7 @@ import (
 	"github.com/ikaven1024/redisAdmin/redis_server"
 )
 
-var webRoot = flag.String("web-root", "./www", "dir of web resource.")
+var webRoot = flag.String("public", "public", "dir of web resource.")
 
 type Server struct {
 	engine *gin.Engine

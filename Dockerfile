@@ -4,7 +4,7 @@ FROM golang:1.12 as serv-builder
 ADD serv /building
 WORKDIR /building
 
-RUN GOPROXY=https://goproxy.cn go build -o redis-admin-serv .
+RUN GOPROXY=https://goproxy.cn go build -o redis-admin .
 
 # Node buid container
 FROM node:8 as web-builder
@@ -25,9 +25,13 @@ RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/s
 
 WORKDIR /usr/share/redis-admin
 ENV GIN_MODE=release
+ENV PATH=$PATH:/usr/share/redis-admin/bin
+RUN mkdir -p ./data
 
-COPY --from=serv-builder /building/redis-admin-serv /building/config.ini ./
-COPY --from=web-builder /building/dist/ ./www/
+COPY --from=serv-builder /building/redis-admin ./bin/redis-admin
+COPY --from=serv-builder /building/config.ini ./config.ini
+COPY --from=web-builder /building/dist/ ./public/
 
-EXPOSE 80
-ENTRYPOINT /usr/share/redis-admin/redis-admin-serv
+EXPOSE 6789
+ENTRYPOINT /usr/share/redis-admin/bin/redis-admin
+

@@ -29,6 +29,7 @@ func errorHandle(c *gin.Context) {
 
 	c.JSON(parsedError.Code, result{
 		Message: parsedError.Message,
+		Detail: parsedError.Detail,
 	})
 }
 
