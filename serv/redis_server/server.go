@@ -49,15 +49,11 @@ func (m *Manager) Delete(id uint) error {
 
 func (m *Manager) Get(id uint) (server RedisServer, err error) {
 	err = m.repository.First(&server, id).Error
-	server.Password = ""
 	return
 }
 
 func (m *Manager) List() (servers []RedisServer, err error) {
 	err = m.repository.Find(&servers).Error
-	for _, s := range servers {
-		s.Password = ""
-	}
 	return
 }
 
